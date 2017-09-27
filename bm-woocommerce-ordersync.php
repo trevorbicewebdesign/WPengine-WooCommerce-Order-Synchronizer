@@ -119,64 +119,43 @@ class bm_woocommerce_ordersync {
 				$this_chunk = $chunk_array[0];
 				foreach($this_chunk as $key=>$val) {
 					
+					//print_r($val);
+					//echo "<br/><br/>";
+					
 					$auto_increment = $this->get_autoincrement('wp_posts');
 					// echo "Auto Increment is ".$auto_increment;
 					
-						$posts_result = $wpdb->update( 
-							"wp_posts"
-							, array( 'ID' => $auto_increment ) 
-							, array( 'ID' => $val->ID ) 
-							, array( '%d' )
-						);					
-						echo $wpdb->last_query."<br/>";
-						if($posts_result) {
-							echo "Re-setting the Staging wp_posts <b>post_id</b> from ".$val->ID." to ".$auto_increment."<br/>"	;
-							echo $val->ID."\n\r";
-							
-							$postmeta_result = $wpdb->update( 
-								"wp_postmeta"
-								, array( 'post_id' => $auto_increment ) 
-								, array( 'post_id' => $val->ID ) 
-								, array( '%d' )
-							);		
-							echo $wpdb->last_query."<br/>";
-							if($postmeta_result) {
-								echo "Re-setting the Staging wp_postmeta <b>post_id</b> from ".$val->ID." to ".$auto_increment."<br/>"	;
+					$posts_result = $wpdb->update( 
+						"wp_posts"
+						, array( 'ID' => $auto_increment ) 
+						, array( 'ID' => $val->ID ) 
+						, array( '%d' )
+					);					
+					echo $wpdb->last_query."<br/>";
+					
+					if($posts_result) {
+						echo "Re-setting the Staging wp_posts <b>post_id</b> from ".$val->ID." to ".$auto_increment."<br/>"	;
+						echo $val->ID."\n\r";
+						
+						$fixit = scandir( 	plugin_dir_path(__FILE__)."post_conflicts");
+						
+						echo "<ul>";
+						foreach($fixit as $index=>$file) {
+							if( preg_match("#[.]php$#", $file)){
+								require( "post_conflicts/".$file);
+								
 							}
-							
-							
-							$postparent_result = $wpdb->update( 
-								"wp_posts"
-								, array( 'post_parent' => $auto_increment ) 
-								, array( 'post_parent' => $val->ID ) 
-								, array( '%d' )
-							);
-							echo $wpdb->last_query."<br/>";
-							if($postparent_result) {
-								echo "Re-setting the Staging wp_posts <b>post_parent</b> from ".$val->ID." to ".$auto_increment."<br/>"	;
-							}
-							
-							$query  = "UPDATE `wp_postmeta` ";
-							$query .= "SET `meta_value` = ".$auto_increment." ";
-							$query .= "WHERE meta_value = ".$val->ID." AND meta_key LIKE '%tile_background_image%' ";
-							$wpdb->query( $query );
-							
-							echo $wpdb->last_query."<br/>";
-							$update_homepage = $wpdb->update( 
-								"wp_options"
-								, array( 'option_value' => $auto_increment ) 
-								, array( 'option_name' => 'page_on_front', 'option_value'=>$val->ID ) 
-								, array( '%d' )
-							);
-							echo $wpdb->last_query."<br/>";
-							$query  = "ALTER TABLE wp_".$this->wpengine.".wp_posts AUTO_INCREMENT = ".($auto_increment+1)." ";
-							//echo $query;
-							$wpdb->query( $query );
-							echo "Autoincrement amount increased from ".$auto_increment." to ".($auto_increment+1)."<br/>";
-							//echo "<hr/>";
 						}
-							
-						echo "<hr/>";
+						echo "</ul>";
+						
+						$query  = "ALTER TABLE wp_".$this->wpengine.".wp_posts AUTO_INCREMENT = ".($auto_increment+1)." ";
+						//echo $query;
+						$wpdb->query( $query );
+						echo "Autoincrement amount increased from ".$auto_increment." to ".($auto_increment+1)."<br/>";
+						//echo "<hr/>";
+					}
+						
+					echo "<hr/>";
 				
 				}
 			
@@ -196,19 +175,15 @@ class bm_woocommerce_ordersync {
 					//if($i>10) {break;}
 					$auto_increment = $this->get_autoincrement('wp_postmeta');
 					
-	
-					$postmeta_result = $wpdb->update( 
-						"wp_postmeta"
-						, array( 'meta_id' => $auto_increment ) 
-						, array( 'meta_id' => $val->meta_id ) 	
-						, array( '%d' )	
-					);		
-					echo $wpdb->last_query."<br/>";
-					$postmeta_result = $wpdb->query( $query );
-					if($postmeta_result) {
-						echo "Re-setting the Staging wp_postmeta <b>post_id</b> from ".$val->meta_id." to ".$auto_increment."<br/>"	;
+					$fixit = scandir( 	plugin_dir_path(__FILE__)."postmeta_conflicts");
+					echo "<ul>";
+					foreach($fixit as $index=>$file) {
+						if( preg_match("#[.]php$#", $file)){
+							require( "postmeta_conflicts/".$file);
+							
+						}
 					}
-					
+					echo "</ul>";
 						
 					$query  = "ALTER TABLE wp_".$this->wpengine.".wp_postmeta AUTO_INCREMENT = ".($auto_increment+1)." ";
 					echo "Autoincrement amount increased from ".$auto_increment." to ".($auto_increment+1)."<br/>";
@@ -257,7 +232,7 @@ class bm_woocommerce_ordersync {
 		FROM information_schema.columns
 		WHERE table_name='".$tablename."'; 
 		";
-		echo $query."<hr/>";
+		//echo $query."<hr/>";
 		$columns = $wpdb->get_results( $query );
 		foreach($columns as $index=>$val) {
 			$field_names.= ",".$val->column_name;
@@ -293,7 +268,7 @@ class bm_woocommerce_ordersync {
 		$query .= "ORDER BY ID ASC ";
 		//$query .= "AND wp_".$this->wpengine.".post_type != 'shop_order'  ";
 		$overwrite_posts = $wpdb->get_results( $query );
-		echo $query."<br/>";
+		//echo $query."<br/>";
 		//die();
 		
 		$this->overwrite_posts = $overwrite_posts;

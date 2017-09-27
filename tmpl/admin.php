@@ -20,8 +20,18 @@ $settings['chunks_postmeta']	= ceil($settings['count_postmeta'] / $settings['chu
 
 
 ?>	
-
-<div class="wrap wpe-pcc-wrap">
+<style>
+#message_box{
+	height:			400px;
+	font-family:		"Courier New", Courier, monospace;
+	background:		#333;
+	color:			#0F9;
+	padding:			20px;
+	overflow-y:		scroll;
+	border:			1px solid #000;
+}
+</style>
+	<div class="wrap wpe-pcc-wrap">
 	<h1><?php _e( 'BM WooCommerce Order Synchronizer' ) ?></h1>
 	<div class="wpe-pcc-main">
 		<p>This tool is designed to help keep WooCommerce Synchronized on the WP Engine Hosting.</p>
@@ -32,8 +42,8 @@ $settings['chunks_postmeta']	= ceil($settings['count_postmeta'] / $settings['chu
 		REPLACE INTO.</p>
 		
 		<hr>
-		<h3>There are <?php echo count($this->overwrite_posts);?> potential wp_post conflicts</h3>
-		<h3>There are <?php echo count($this->overwrite_postmeta);?> potential wp_postmeta conflicts</h3>
+		<h3>There are <span id="posts_counter"><?php echo count($this->overwrite_posts);?></span> potential wp_post conflicts</h3>
+		<h3>There are <span id="postmeta_counter"><?php echo count($this->overwrite_postmeta);?></span> potential wp_postmeta conflicts</h3>
 		
 		<input <?php if( count($this->overwrite_posts) <= 0 & count($this->overwrite_postmeta) <= 0 ) {echo "disabled='disabled'"; }?> class="button button-primary button-large" id="synchronize" 	name="synchronize" 	value="Remove Post and Postmeta Conflicts" 		type="submit">
 		<input <?php if(count($this->overwrite_posts) > 0  || count($this->overwrite_postmeta) > 0) {echo "disabled='disabled'"; }?> class="button button-primary button-large" id="import" 		name="import" 		value="Import orders from Production to Staging" 	type="submit">
@@ -44,9 +54,13 @@ $settings['chunks_postmeta']	= ceil($settings['count_postmeta'] / $settings['chu
 
 
 <div id="progress_bar" style="heigh:40px;width:100%;margin-top:20px;"><div class="status_level" style="background-color:#093;height:40px;width:0%;"></div></div>
+Console:
 <div id="message_box"></div>
 
 <script>
+Date.prototype.timeNow = function () {
+     return ((this.getHours() < 10)?"0":"") + this.getHours() +":"+ ((this.getMinutes() < 10)?"0":"") + this.getMinutes() +":"+ ((this.getSeconds() < 10)?"0":"") + this.getSeconds();
+}
 jQuery(document).ready( function() {
 	var i = 1;
 	var posts_chunk_counter = <?php echo $settings['chunks_posts']; ?>;
@@ -61,16 +75,20 @@ jQuery(document).ready( function() {
 	});
 	jQuery("#import").click( function(e) {
 		e.preventDefault(); 
-		ajax_chunker('posts');
+		import_woocommerce_orders();
 	});
 	function ajax_chunker(type) {
-		jQuery("#message_box").html(type + " ajax chunker started<br/>" + jQuery("#message_box").html() );
+		
+		var now = new Date();
+		
+		
+		jQuery("#message_box").html( "<strong>"+now.timeNow() +"</strong> " + type + " updating <?php echo $settings['chunk']; ?> rows, block " + i + "<br/> " + jQuery("#message_box").html() );
 		jQuery.ajax({
 			type : 		"post",
 			url : 		'admin-ajax.php',
 			data : {
 				action: 		"remove_post_conflicts", 
-				batch : 		i,
+				batch : 		i,	
 				size:		<?php echo $settings['chunk']; ?>,
 				type:		type
 			},
@@ -86,14 +104,35 @@ jQuery(document).ready( function() {
 				}
 				
 				jQuery("#progress_bar .status_level").css("width", percent+"%");
+				
+				if(type=='posts'){
+					var posts_counter = parseInt(jQuery("#posts_counter").text());
+					posts_counter = posts_counter - <?php echo $settings['chunk']; ?>;
+					if(posts_counter<0) {
+						posts_counter = 0;
+					}
+					jQuery("#posts_counter").text(posts_counter)
+				}
+				if(type=='postmeta'){
+					var postmeta_counter = parseInt(jQuery("#postmeta_counter").text());
+					postmeta_counter = postmeta_counter - <?php echo $settings['chunk']; ?>;
+					if(postmeta_counter<0) {
+						postmeta_counter = 0;
+					}
+					jQuery("#postmeta_counter").text(postmeta_counter)
+				}
+				
 				if( i<chunk_counter ) {
 					//alert(response);
+					
 					i++;
 					ajax_chunker(type);
 				}
 				else {
-					//jQuery("#message_box").html( jQuery("#message_box").html() + "Ajax " + type " Chunker Completed<br/>");
-					jQuery("#message_box").html("I ran "+ i +" times<br/>" + jQuery("#message_box").html());
+
+					now = new Date();				
+					
+					jQuery("#message_box").html("<strong>"+now.timeNow() +"</strong> " + " I ran "+ i +" times<br/>" + jQuery("#message_box").html());
 					jQuery("#progress_bar .status_level").css("width", "0%");
 					jQuery("#progress_bar .status_level").css("background-color", "#0085ba"); 
 					if(type=='posts'){
@@ -108,8 +147,8 @@ jQuery(document).ready( function() {
 			}
 		}); 
 	}
-	function import_woocommerce_orders(type) {
-		jQuery("#message_box").html("Imorting WooCommerce Orders" + jQuery("#message_box").html() );
+	function import_woocommerce_orders() {
+		jQuery("#message_box").html("Imorting WooCommerce Orders<br/>" + jQuery("#message_box").html() );
 		jQuery.ajax({
 			type : 		"post",
 			url : 		'admin-ajax.php',
