@@ -31,6 +31,7 @@ $settings['chunks_postmeta']	= ceil($settings['count_postmeta'] / $settings['chu
 	border:			1px solid #000;
 }
 </style>
+
 	<div class="wrap wpe-pcc-wrap">
 	<h1><?php _e( 'BM WooCommerce Order Synchronizer' ) ?></h1>
 	<div class="wpe-pcc-main">

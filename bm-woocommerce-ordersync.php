@@ -123,7 +123,7 @@ class bm_woocommerce_ordersync {
 					//echo "<br/><br/>";
 					
 					$auto_increment = $this->get_autoincrement('wp_posts');
-					// echo "Auto Increment is ".$auto_increment;
+					echo "Auto Increment is ".$auto_increment."<br/>";
 					
 					$posts_result = $wpdb->update( 
 						"wp_posts"
@@ -286,15 +286,20 @@ class bm_woocommerce_ordersync {
 		$query  = "
 		SELECT * FROM wp_".$this->wpengine.".wp_postmeta 
 		WHERE meta_id IN (
-			SELECT meta_id FROM snapshot_".$this->wpengine.".wp_postmeta ";
+			SELECT pm.meta_id FROM snapshot_".$this->wpengine.".wp_postmeta AS pm
+			LEFT JOIN snapshot_".$this->wpengine.".wp_posts AS p ON p.ID = pm.post_id
+			";
 			$query .= "WHERE meta_id IN( ";
 				$query .= "SELECT pm.meta_id FROM wp_".$this->wpengine.".wp_posts AS p ";
 				$query .= "LEFT JOIN wp_".$this->wpengine.".wp_postmeta AS pm ON p.ID = pm.post_id ";
 				$query .= "WHERE p.post_type = 'shop_order' ";
-			$query .= ")
+			$query .= ") ";
+			$query .= "AND p.post_type != 'shop_order' ";
+		$query .= "
 		)
+		
 		";
-		//echo $query."<hr/>";
+		// echo $query."<hr/>";
 		//die();
 		//die();
 		$overwrite_postmeta = $wpdb->get_results( $query );
@@ -303,12 +308,19 @@ class bm_woocommerce_ordersync {
 		
 		return $overwrite_postmeta;
 	}
-
-	function get_autoincrement($tablename) {
+	function get_autoincrement($tablename, $environment='production') {
 		global $wpdb;
+		if($environment == 'production'){
+			$table_prefix = "wp_";	
+		}
+		else if($environment == 'staging'){
+			$table_prefix = "snapshot_";	
+		}
+		
 		$query  = "SELECT `AUTO_INCREMENT` FROM  information_schema.TABLES ";
-		$query .= "WHERE TABLE_SCHEMA = 'wp_".$this->wpengine."' ";
+		$query .= "WHERE TABLE_SCHEMA = '".$table_prefix.$this->wpengine."' ";
 		$query .= "AND   TABLE_NAME   = '".$tablename."' ";
+		// echo $query."<br/>";
 		$auto_increment = $wpdb->get_results( $query );
 		return $auto_increment[0]->AUTO_INCREMENT;
 	}
