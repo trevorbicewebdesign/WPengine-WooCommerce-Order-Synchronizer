@@ -34,6 +34,7 @@ $settings['chunks_postmeta']	= ceil($settings['count_postmeta'] / $settings['chu
 
 	<div class="wrap wpe-pcc-wrap">
 	<h1><?php _e( 'WooCommerce Order Synchronizer' ) ?></h1>
+	<span>Brought to you by <a href="https://github.com/burningmantech/" >BURNING MAN TECH</a></span>
 	<div class="wpe-pcc-main">
 		<p>This tool is designed to help keep WooCommerce Synchronized on the WP Engine Hosting.</p>
 		<p>Please make sure to backup your Live and Staging websites before attempting to use this tool</p>
