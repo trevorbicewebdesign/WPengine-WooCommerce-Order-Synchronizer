@@ -33,21 +33,24 @@ $settings['chunks_postmeta']	= ceil($settings['count_postmeta'] / $settings['chu
 </style>
 
 	<div class="wrap wpe-pcc-wrap">
-	<h1><?php _e( 'BM WooCommerce Order Synchronizer' ) ?></h1>
+	<h1><?php _e( 'WooCommerce Order Synchronizer' ) ?></h1>
 	<div class="wpe-pcc-main">
 		<p>This tool is designed to help keep WooCommerce Synchronized on the WP Engine Hosting.</p>
+		<p>Please make sure to backup your Live and Staging websites before attempting to use this tool</p>
 		<p>It works by checking the WooCommerce Order POSTS on Production, and then checks to see if
-		there are any conflicting POSTS on the Staging Site. If any are found, the script will then reset
-		those POSTS IDs. Once that completes, the script then copies the Order POSTS to the Staging along
+		there are any conflicting POSTS with identical IDs on the Staging Site. If any are found, the script will then reset
+		those POSTS IDs. Postmeta is also then checked for any conflicts.</p>
+		<p>Once that completes, the script then copies the Order POSTS to the Staging along
 		with the POSTMETA and the corresponding WooCommerce Database Tables. This is all done using 
 		REPLACE INTO.</p>
-		
 		<hr>
-		<h3>There are <span id="posts_counter"><?php echo count($this->overwrite_posts);?></span> potential wp_post conflicts</h3>
-		<h3>There are <span id="postmeta_counter"><?php echo count($this->overwrite_postmeta);?></span> potential wp_postmeta conflicts</h3>
-		
-		<input <?php if( count($this->overwrite_posts) <= 0 & count($this->overwrite_postmeta) <= 0 ) {echo "disabled='disabled'"; }?> class="button button-primary button-large" id="synchronize" 	name="synchronize" 	value="Remove Post and Postmeta Conflicts" 		type="submit">
-		<input <?php if(count($this->overwrite_posts) > 0  || count($this->overwrite_postmeta) > 0) {echo "disabled='disabled'"; }?> class="button button-primary button-large" id="import" 		name="import" 		value="Import orders from Production to Staging" 	type="submit">
+		<p>
+			<h3>There are <span id="posts_counter"><?php echo count($this->overwrite_posts);?></span> potential wp_post conflicts</h3>
+			<h3>There are <span id="postmeta_counter"><?php echo count($this->overwrite_postmeta);?></span> potential wp_postmeta conflicts</h3>
+			<input type="checkbox" value="1" id="approved" />I have made a backup of my database and/or I understand the risks<br/>
+		</p>
+		<input <?php if( count($this->overwrite_posts) <= 0 & count($this->overwrite_postmeta) <= 0 ) {echo "disabled='disabled'"; }?> class="button button-primary button-large" id="synchronize" 	name="synchronize" 	value="1) Remove Post and Postmeta Conflicts" 		type="submit">
+		<input <?php if(count($this->overwrite_posts) > 0  || count($this->overwrite_postmeta) > 0 || $this->checkOrderSynchronization()==true) {echo "disabled='disabled'"; }?> class="button button-primary button-large" id="import" 		name="import" 		value="2) Import orders from Production to Staging" 	type="submit">
 		
 	</div>	
 </div>
@@ -57,7 +60,6 @@ $settings['chunks_postmeta']	= ceil($settings['count_postmeta'] / $settings['chu
 <div id="progress_bar" style="heigh:40px;width:100%;margin-top:20px;"><div class="status_level" style="background-color:#093;height:40px;width:0%;"></div></div>
 Console:
 <div id="message_box"></div>
-
 <script>
 Date.prototype.timeNow = function () {
      return ((this.getHours() < 10)?"0":"") + this.getHours() +":"+ ((this.getMinutes() < 10)?"0":"") + this.getMinutes() +":"+ ((this.getSeconds() < 10)?"0":"") + this.getSeconds();
@@ -70,20 +72,62 @@ jQuery(document).ready( function() {
 	var postmeta_chunk_counter = <?php echo $settings['chunks_postmeta']; ?>;
 	var postmeta_chunker_unit = (1/<?php echo $settings['chunks_postmeta']; ?>)*100;
 	
+	
+	function preventAccidental() {
+		if( jQuery('#approved').attr('checked')=='checked') {
+			return false;
+		}
+		alert('Please check the checkbox noting that you have made a backup and/or understand the risks involved in this operation');
+		return true	
+	}
 	jQuery("#synchronize").click( function(e) {
 		e.preventDefault(); 
+		
+		
+		
+		
+		
+		if( preventAccidental()==false ){
+			jQuery('#synchronize').attr('disabled','disabled');
+		}
+		else {
+			return;	
+		}
 		ajax_chunker('posts');
 	});
 	jQuery("#import").click( function(e) {
 		e.preventDefault(); 
+		
+		if( preventAccidental()==false ){
+			jQuery('#import').attr('disabled','disabled');
+		}
+		else {
+			return;	
+		}
+		
 		import_woocommerce_orders();
 	});
 	function ajax_chunker(type) {
 		
 		var now = new Date();
 		
+		var overwrite_posts 	= jQuery("#posts_counter").text();
+		var overwrite_postmeta 	= jQuery("#postmeta_counter").text();
+		if(type=='posts') {
+			if(overwrite_posts>=500) {
+				overwrite_posts = 500;	
+			}
+			var messageString		= "<strong>"+now.timeNow() +"</strong> " + type + " updating " + overwrite_posts + " rows, block " + i + "<br/> ";
+		}
+		else {
+			if(overwrite_postmeta>=500) {
+				overwrite_postmeta = 500;	
+			}
+			var messageString		= "<strong>"+now.timeNow() +"</strong> " + type + " updating " + overwrite_postmeta + " rows, block " + i + "<br/> ";
+		}
+		jQuery("#message_box").html( messageString + jQuery("#message_box").html() );
 		
-		jQuery("#message_box").html( "<strong>"+now.timeNow() +"</strong> " + type + " updating <?php echo $settings['chunk']; ?> rows, block " + i + "<br/> " + jQuery("#message_box").html() );
+		
 		jQuery.ajax({
 			type : 		"post",
 			url : 		'admin-ajax.php',
@@ -148,7 +192,31 @@ jQuery(document).ready( function() {
 			}
 		}); 
 	}
-	function import_woocommerce_orders() {
+	function checkOrderSynchronization() {
+		jQuery('#import').attr('disabled','disabled');
+		jQuery("#message_box").html("Checking Order Synchronization<br/>" + jQuery("#message_box").html() );
+		jQuery.ajax({
+			type : 		"post",
+			url : 		'admin-ajax.php',
+			data : {
+				action: 		"checkOrderSynchronization"
+			},
+			success: function(response) {
+				
+				if(response==0){
+					jQuery("#message_box").html("Orders are Synchronized<br/>" + jQuery("#message_box").html() );
+					jQuery('#import').attr('disabled','disabled');
+				}
+				else {
+					jQuery('#import').removeAttr('disabled');	
+				}
+			}
+		}); 
+	}
+	function import_woocommerce_orders() {	
+		if(checkOrderSynchronization()) {
+			return;
+		}
 		jQuery("#message_box").html("Imorting WooCommerce Orders<br/>" + jQuery("#message_box").html() );
 		jQuery.ajax({
 			type : 		"post",
@@ -158,7 +226,8 @@ jQuery(document).ready( function() {
 			},
 			success: function(response) {
 				
-				
+				checkOrderSynchronization();
+				jQuery("#message_box").html("Replace Into Import completed.<br/>" + jQuery("#message_box").html() );
 			}
 		}); 
 	}

@@ -1,7 +1,7 @@
-	<?php
+<?php
 /**
- * Plugin Name: Burning Man WooCommerce Order Synchronizer
- * Version:     0.0.2
+ * Plugin Name: WooCommerce Order Synchronizer
+ * Version:     0.0.3
  * Plugin URI:  
  * Author:      Trevor Bice
  * Author URI:  http://burningman.org/
@@ -33,7 +33,30 @@ class bm_woocommerce_ordersync {
 			
 		add_action('wp_ajax_remove_post_conflicts', 		array( self::instance(), 'remove_post_conflicts' ) );  
 		add_action('wp_ajax_import_woocommerce_orders', 	array( self::instance(), 'import_woocommerce_orders' ) );  
+		add_action('wp_ajax_checkOrderSynchronization', 	array( self::instance(), 'checkOrderSynchronization' ) );  
 		
+	}
+	function checkOrderSynchronization() {
+		global $wpdb;
+		$this->get_wpengine_installation();
+		$query  = "SELECT * FROM wp_".$this->wpengine.".wp_posts ";
+		$query .= "WHERE post_type = 'shop_order' ";	
+		$wpdb->query( $query );
+		$results = $wpdb->get_results( $query );
+		$production_string = json_encode($results);
+		$production_string = md5($production_string);
+		
+		$query  = "SELECT * FROM snapshot_".$this->wpengine.".wp_posts ";
+		$query .= "WHERE post_type = 'shop_order' ";	
+		$wpdb->query( $query );
+		$results = $wpdb->get_results( $query );
+		$staging_string = json_encode($results);
+		$staging_string = md5($staging_string);
+		if($production_string==$staging_string) {
+			
+			return true;
+		}	
+		return false;
 	}
 	function import_woocommerce_orders() {
 		global $wpdb;
@@ -197,7 +220,7 @@ class bm_woocommerce_ordersync {
 		}
 	function create_menu() {
 		// Create Tools sub-menu.
-		$this->page = add_submenu_page( 'tools.php', __( 'BM WooCommerce Order Sync', 'bm-woocommerce-ordersync' ), __( 'BM WooCommerce Order Sync', 'bm-woocommerce-ordersync' ), 'manage_options', 'bm-woocommerce-ordersync', array( $this, 'settings_page' ) );
+		$this->page = add_submenu_page( 'tools.php', __( 'WooCommerce Order Sync', 'bm-woocommerce-ordersync' ), __( 'WooCommerce Order Sync', 'bm-woocommerce-ordersync' ), 'manage_options', 'bm-woocommerce-ordersync', array( $this, 'settings_page' ) );
 	}
 	function get_wpengine_installation() {
 		global $wpdb;
