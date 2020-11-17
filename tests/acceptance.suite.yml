@@ -1,0 +1,52 @@
+# Codeception Test Suite Configuration
+#
+# Suite for acceptance tests.
+# Perform tests in browser using the WPWebDriver or WPBrowser.
+# Use WPDb to set up your initial database fixture.
+# If you need both WPWebDriver and WPBrowser tests - create a separate suite.
+
+actor: AcceptanceTester
+modules:
+    enabled:
+        - WPDb
+        - \Helper\Acceptance
+        - WPWebDriver
+    config:
+        WPDb:
+            dsn: 'mysql:host=%DB_HOST%;dbname=%DB_NAME%'
+            user: '%DB_USER%'
+            password: '%DB_PASSWORD%'
+            dump: 'tests/_data/dump.sql'
+            #import the dump before the tests; this means the test site database will be repopulated before the tests.
+            populate: true  
+            # re-import the dump between tests; this means the test site database will be repopulated between the tests.
+            # populator: 'mysqldump wp_bmartumnal -u root -proot < tests/_data/dump.sql;mysql -u $user -p$password wp_bmartumnal_test < $dump'
+            # populator: 'mysql -u $user -p$password wp_bmartumnal_test < $dump'
+            # populator: 'export MYSQL_PWD=$password; mysql -u $user $dbname < $dump'
+            cleanup: true 
+            waitlock: 5
+            url: '%WP_SITEURL%'
+            urlReplacement: false #replace the hardcoded dump URL with the one above
+            tablePrefix: 'wp_'
+        WPWebDriver:
+            browser: chrome
+            window: false
+            wait: 5
+            url: '%WP_SITEURL%'
+            port: 9515
+            clear_cookies: true
+            adminUsername: admin
+            adminPassword: password
+            adminUrl: /wp-admin
+            capabilities:
+              goog:chromeOptions: 
+                args: ["ignore-certificate-errors","disable-dev-shm-usage", "no-sandbox", "window-size=1920,1080"]
+extensions:
+    enabled:
+        - Codeception\Extension\RunProcess:
+            - mkdir wordpress/wp-content/plugins/bm-woocommerce-ordersync/
+            - cp -R bm-woocommerce-ordersync.php wordpress/wp-content/plugins/bm-woocommerce-ordersync/
+            - mkdir wordpress\wp-content\plugins\wp-plugin-bm-oauth-client\tmpl
+            - cp -R tmpl/ wordpress/wp-content/plugins/bm-woocommerce-ordersync/tmpl/
+            - chromedriver --url-base=/wd/hub 
+        
