@@ -133,18 +133,12 @@ class bm_woocommerce_ordersync {
 			
 			$item_index	= $chunk['size'] * ($chunk['batch']-1);
 			
-			
-			
 			if($chunk['type'] == "posts") {
 				$this->get_overwrite_posts();	
 				$chunk_array = array_chunk($this->overwrite_posts, $chunk['size']);
 				// Batch 1 needs to get index 0
 				$this_chunk = $chunk_array[0];
 				foreach($this_chunk as $key=>$val) {
-					
-					//print_r($val);
-					//echo "<br/><br/>";
-					
 					$auto_increment = $this->get_autoincrement('wp_posts');
 					echo "Auto Increment is ".$auto_increment."<br/>";
 					
@@ -267,7 +261,26 @@ class bm_woocommerce_ordersync {
 		
 		return $field_names;
 	}
-
+    public function getPostConflicts($post_type='page'){
+        global $wpdb;
+        $query  = "";
+		$query .= "SELECT ID FROM wp_".$this->wpengine.".wp_posts ";
+		$query .= "WHERE ID IN ( ";
+			$query .= "SELECT ID FROM snapshot_".$this->wpengine.".wp_posts ";
+			$query .= "WHERE ID IN( ";
+				$query .= "SELECT ID FROM wp_".$this->wpengine.".wp_posts ";
+				$query .= "WHERE post_type = '$post_type' ";
+			$query .= ") ";
+			$query .= "AND post_type != '$post_type' ";
+			$query .= "ORDER BY ID ASC ";
+		$query .= ") ";
+		$query .= "ORDER BY ID ASC ";
+        echo $query;
+        die();
+		//$query .= "AND wp_".$this->wpengine.".post_type != 'shop_order'  ";
+		$overwrite_posts = $wpdb->get_results( $query );
+        return $overwrite_posts;
+    }
 	function get_overwrite_posts() {
 		global $wpdb;
 		// This batch needs new IDs
