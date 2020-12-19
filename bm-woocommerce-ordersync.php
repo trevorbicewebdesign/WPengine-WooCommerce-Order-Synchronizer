@@ -275,8 +275,7 @@ class bm_woocommerce_ordersync {
 			$query .= "ORDER BY ID ASC ";
 		$query .= ") ";
 		$query .= "ORDER BY ID ASC ";
-        echo $query;
-        die();
+        
 		//$query .= "AND wp_".$this->wpengine.".post_type != 'shop_order'  ";
 		$overwrite_posts = $wpdb->get_results( $query );
         return $overwrite_posts;
@@ -328,9 +327,9 @@ class bm_woocommerce_ordersync {
 			$query .= "WHERE meta_id IN( ";
 				$query .= "SELECT pm.meta_id FROM wp_".$this->wpengine.".wp_posts AS p ";
 				$query .= "LEFT JOIN wp_".$this->wpengine.".wp_postmeta AS pm ON p.ID = pm.post_id ";
-				$query .= "WHERE p.post_type = 'shop_order' ";
+				//$query .= "WHERE p.post_type = 'shop_order' ";
 			$query .= ") ";
-			$query .= "AND p.post_type != 'shop_order' ";
+			//$query .= "AND p.post_type != 'shop_order' ";
 		$query .= "
 		)
 		
